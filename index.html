@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8段数码管模拟器</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            background-color: #2a2a2a;
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            border: 1px solid #333;
+            animation: containerEntry 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform: translateY(50px);
+            opacity: 0;
+        }
+
+        @keyframes containerEntry {
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+            font-size: 24px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        /* 数码管显示屏容器 */
+        .display-board {
+            position: relative;
+            width: 180px;
+            height: 280px;
+            margin: 0 auto 30px auto;
+        }
+
+        /* 单个段的基础样式（胶囊形） */
+        .light {
+            position: absolute;
+            background-color: #1e1e1e;
+            border: 2px solid #333;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.8);
+            cursor: default;
+            border-radius: 10px;
+        }
+
+        /* 定义 7 个段和 1 个小数点的绝对位置 */
+        /* 1: 上横 (A) */
+        .light[data-index="1"] { top: 0; left: 30px; width: 120px; height: 30px; }
+        /* 2: 右上竖 (B) */
+        .light[data-index="2"] { top: 35px; right: 0; width: 30px; height: 100px; }
+        /* 3: 右下竖 (C) */
+        .light[data-index="3"] { bottom: 35px; right: 0; width: 30px; height: 100px; }
+        /* 4: 下横 (D) */
+        .light[data-index="4"] { bottom: 0; left: 30px; width: 120px; height: 30px; }
+        /* 5: 左下竖 (E) */
+        .light[data-index="5"] { bottom: 35px; left: 0; width: 30px; height: 100px; }
+        /* 6: 左上竖 (F) */
+        .light[data-index="6"] { top: 35px; left: 0; width: 30px; height: 100px; }
+        /* 7: 中横 (G) */
+        .light[data-index="7"] { top: 125px; left: 30px; width: 120px; height: 30px; }
+        /* 8: 小数点 (DP) */
+        .light[data-index="8"] { bottom: 0; right: -40px; width: 30px; height: 30px; border-radius: 50%; }
+
+        /* 段亮起时的发光效果 */
+        .light.active {
+            background-color: #4CAF50;
+            border-color: #81C784;
+            box-shadow: 
+                0 0 15px #4CAF50, 
+                0 0 30px #4CAF50,
+                0 0 45px rgba(76, 175, 80, 0.6),
+                inset 0 0 15px #ffffff;
+            animation: pulseGlow 0.8s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.8; box-shadow: 0 0 10px #4CAF50, inset 0 0 10px #fff; }
+            100% { opacity: 1; box-shadow: 0 0 30px #4CAF50, 0 0 60px #4CAF50, inset 0 0 25px #fff; }
+        }
+
+        /* 数字切换时的弹跳强调动画 */
+        .light.pop-anim {
+            animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popBounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background-color: #8BC34A; box-shadow: 0 0 60px #8BC34A; }
+            100% { transform: scale(1); background-color: #4CAF50; }
+        }
+
+        /* 控制区域 */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            background: #222;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-group:focus-within {
+            border-color: #4CAF50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
+
+        input[type="number"] {
+            padding: 12px 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            background-color: #333;
+            color: #fff;
+            width: 120px;
+            outline: none;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5); }
+        button:active { transform: translateY(2px) scale(0.96); }
+
+        button.stop {
+            background: linear-gradient(135deg, #f44336, #c62828);
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+        
+        button.stop:hover { box-shadow: 0 6px 20px rgba(244, 67, 54, 0.5); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-5px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚡ 8段数码管模拟器 ⚡</h2>
+    
+    <div class="display-board">
+        <div class="light" data-index="1"></div> <!-- 上 -->
+        <div class="light" data-index="2"></div> <!-- 右上 -->
+        <div class="light" data-index="3"></div> <!-- 右下 -->
+        <div class="light" data-index="4"></div> <!-- 下 -->
+        <div class="light" data-index="5"></div> <!-- 左下 -->
+        <div class="light" data-index="6"></div> <!-- 左上 -->
+        <div class="light" data-index="7"></div> <!-- 中 -->
+        <div class="light" data-index="8"></div> <!-- 小数点 -->
+    </div>
+
+    <div class="controls">
+        <div>
+            <button id="loopBtn" onclick="toggleLoop()">🔄 循环显示 0-9</button>
+        </div>
+        
+        <div class="input-group" id="inputGroup">
+            <input type="number" id="numInput" min="0" max="9" placeholder="输入0-9" onkeyup="handleKeyUp(event)">
+            <button onclick="showNumber()">🎯 显示数字</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const lights = document.querySelectorAll('.light');
+    let loopInterval = null;
+    let isLooping = false;
+
+    // ★ 核心：0-9 数字对应的段码表 (1代表亮，0代表灭)
+    // 数组顺序对应 data-index 1 到 8
+    // 段位顺序: 1(上), 2(右上), 3(右下), 4(下), 5(左下), 6(左上), 7(中), 8(小数点)
+    const digitMap = {
+        '0': [1, 1, 1, 1, 1, 1, 0, 0],
+        '1': [0, 1, 1, 0, 0, 0, 0, 0],
+        '2': [1, 1, 0, 1, 1, 0, 1, 0],
+        '3': [1, 1, 1, 1, 0, 0, 1, 0],
+        '4': [0, 1, 1, 0, 0, 1, 1, 0],
+        '5': [1, 0, 1, 1, 0, 1, 1, 0],
+        '6': [1, 0, 1, 1, 1, 1, 1, 0],
+        '7': [1, 1, 1, 0, 0, 0, 0, 0],
+        '8': [1, 1, 1, 1, 1, 1, 1, 0],
+        '9': [1, 1, 1, 1, 0, 1, 1, 0]
+    };
+
+    // 清除所有灯的状态
+    function clearAllLights() {
+        lights.forEach(light => {
+            light.classList.remove('active');
+            light.classList.remove('pop-anim');
+        });
+    }
+
+    // ★ 核心渲染函数：根据数字点亮对应的灯
+    function renderNumber(numStr) {
+        clearAllLights(); // 先熄灭所有灯
+        const pattern = digitMap[numStr];
+        if (!pattern) return;
+
+        lights.forEach((light, index) => {
+            // pattern 数组中 1 代表点亮，0 代表熄灭
+            if (pattern[index] === 1) {
+                light.classList.add('active');
+                // 添加微小的弹跳动画，让数字切换更生动
+                light.classList.add('pop-anim');
+                setTimeout(() => light.classList.remove('pop-anim'), 400);
+            }
+        });
+    }
+
+    // 循环显示 0-9
+    function toggleLoop() {
+        const loopBtn = document.getElementById('loopBtn');
+        
+        if (isLooping) {
+            // 停止循环
+            clearInterval(loopInterval);
+            isLooping = false;
+            loopBtn.innerText = "🔄 循环显示 0-9";
+            loopBtn.classList.remove('stop');
+            clearAllLights();
+        } else {
+            // 开始循环
+            isLooping = true;
+            loopBtn.innerText = "⏹️ 停止循环";
+            loopBtn.classList.add('stop');
+            document.getElementById('numInput').blur();
+
+            let currentNum = 0;
+            loopInterval = setInterval(() => {
+                renderNumber(currentNum.toString());
+                currentNum = (currentNum + 1) % 10; // 0-9 循环
+            }, 1000); // 每 1 秒切换一个数字
+            
+            // 立即显示第一个数字
+            renderNumber('0');
+        }
+    }
+
+    // 输入框触发显示指定数字
+    function showNumber() {
+        const inputVal = document.getElementById('numInput').value;
+        const num = parseInt(inputVal);
+
+        // 校验输入 (0-9)
+        if (isNaN(num) || num < 0 || num > 9) {
+            const inputGroup = document.getElementById('inputGroup');
+            inputGroup.style.animation = 'none';
+            inputGroup.offsetHeight;
+            inputGroup.style.animation = 'shake 0.4s ease';
+            setTimeout(() => { inputGroup.style.animation = ''; }, 400);
+            alert("请输入 0 到 9 之间的有效数字！");
+            return;
+        }
+
+        // 如果正在循环，先停止循环
+        if (isLooping) {
+            toggleLoop();
+        }
+
+        // 渲染对应数字
+        renderNumber(num.toString());
+    }
+
+    function handleKeyUp(event) {
+        if (event.key === 'Enter') {
+            showNumber();
+        }
+    }
+</script>
+
+</body>
+</html>
